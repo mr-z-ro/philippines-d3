@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+body { background: #B2DFEE; }
+.subunit.PHL { fill: #ddc; }
+.subunit-boundary {
+  fill: none;
+  stroke: #aaa;
+//  stroke-dasharray: 2,2;
+  stroke-linejoin: round;
+}
+.subunit-boundary.PHL {
+  stroke: #aaa;
+}
+.subunit-label {
+  fill: #777;
+  fill-opacity: .5;
+  font-size: 20px;
+  font-weight: 300;
+  text-anchor: middle;
+}
+.place,
+.place-label {
+  fill: #444;
+}
+
+text {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 10px;
+  pointer-events: none;
+}
+</style>
+<body>
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<script src="http://d3js.org/topojson.v1.min.js"></script>
+<script>
+var width = 960,
+    height = 1160;
+
+var svg = d3.select("body").append("svg")
+    .attr("width", width)
+    .attr("height", height)
+    .style("overflow", "auto");
+
+d3.json("ph.json", function(error, ph) {
+  if (error) return console.error(error);
+
+  var subunits = topojson.feature(ph, ph.objects.ph_subunits);
+
+  var projection = d3.geo.albers();
+  projection.rotate([-4,0]);
+  projection.scale(3000);
+  projection.center([122.427150, 12.499176]);
+  projection.parallels([10, 15]);
+  var path = d3.geo.path()
+       .projection(projection)
+       .pointRadius(2);
+  svg.append("path")
+    .datum(subunits)
+    .attr("d", path);
+
+  svg.selectAll(".subunit")
+    .data(topojson.feature(ph, ph.objects.ph_subunits).features)
+  .enter().append("path")
+    .attr("class", function(d) { return "subunit " + d.id; })
+    .attr("d", path);
+
+  svg.append("path")
+    .datum(topojson.mesh(ph, ph.objects.ph_subunits, function(a, b) { return a === b && a.id === "PHL"; }))
+    .attr("d", path)
+    .attr("class", "subunit-boundary PHI");
+
+  svg.append("path")
+    .datum(topojson.feature(ph, ph.objects.ph_places))
+    .attr("d", path)
+    .attr("class", "place");
+
+  svg.selectAll(".place-label")
+    .data(topojson.feature(ph, ph.objects.ph_places).features)
+  .enter().append("text")
+    .attr("class", "place-label")
+    .attr("transform", function(d) { return "translate(" + projection(d.geometry.coordinates) + ")"; })
+    .attr("dy", ".35em")
+    .text(function(d) { return d.properties.name; });
+
+  svg.selectAll(".place-label")
+    .attr("x", function(d) { return d.geometry.coordinates[0] > -1 ? 6 : -6; })
+    .style("text-anchor", function(d) { return d.geometry.coordinates[0] > -1 ? "start" : "end"; });
+
+  svg.selectAll(".subunit-label")
+    .data(topojson.feature(ph, ph.objects.ph_subunits).features)
+  .enter().append("text")
+    .attr("class", function(d) { return "subunit-label " + d.id; })
+    .attr("transform", function(d) { return "translate(" + path.centroid(d) + ")"; })
+    .attr("dy", ".35em")
+    .text(function(d) { return d.properties.name; });
+});
+
+</script>
